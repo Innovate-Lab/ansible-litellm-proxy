@@ -1,0 +1,8 @@
+---
+# defaults file for ssl
+ssl_email: "admin@{{ domain_name }}"
+ssl_dhparam_size: 2048
+ssl_cert_path: "/etc/letsencrypt/live/{{ domain_name }}"
+ssl_certbot_auto_renew: true
+ssl_certbot_renew_hour: "2"
+ssl_certbot_renew_minute: "0"

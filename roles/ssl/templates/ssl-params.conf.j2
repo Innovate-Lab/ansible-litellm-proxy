@@ -1,0 +1,24 @@
+ssl_protocols TLSv1.2 TLSv1.3;
+ssl_prefer_server_ciphers on;
+ssl_ciphers "EECDH+AESGCM:EDH+AESGCM:AES256+EECDH:AES256+EDH";
+ssl_ecdh_curve secp384r1;
+ssl_session_timeout 1d;
+ssl_session_cache shared:SSL:10m;
+ssl_session_tickets off;
+ssl_stapling on;
+ssl_stapling_verify on;
+
+# Add HSTS header
+add_header Strict-Transport-Security "max-age=63072000; includeSubDomains; preload" always;
+
+# Add other security headers from configuration
+{% for header in security_headers %}
+{% set parts = header.split(':', 1) %}
+add_header {{ parts[0] }} "{{ parts[1] | trim }}" always;
+{% endfor %}
+
+# Configure Diffie-Hellman parameter
+ssl_dhparam /etc/nginx/dhparam.pem;
+
+# Optimize SSL
+ssl_buffer_size 4k;

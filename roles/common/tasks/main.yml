@@ -1,0 +1,91 @@
+---
+# tasks file for common
+- name: Update apt cache
+  apt:
+    update_cache: yes
+    cache_valid_time: 3600
+  when: ansible_os_family == "Debian"
+  tags: [common, packages]
+
+- name: Install common packages
+  apt:
+    name:
+      - curl
+      - wget
+      - unzip
+      - git
+      - htop
+      - vim
+      - ufw
+      - fail2ban
+      - logrotate
+    state: present
+  when: ansible_os_family == "Debian"
+  tags: [common, packages]
+
+- name: Create application group
+  group:
+    name: "{{ app_group }}"
+    system: yes
+  tags: [common, users]
+  register: app_group_details
+
+- name: Create application user
+  user:
+    name: "{{ app_user }}"
+    group: "{{ app_group }}"
+    system: yes
+    home: "{{ app_home }}"
+    shell: /bin/bash
+    create_home: yes
+  tags: [common, users]
+  register: app_user_details
+
+- name: Set timezone
+  timezone:
+    name: Asia/Ho_Chi_Minh
+  notify: restart rsyslog
+  tags: [common, timezone]
+
+- name: Configure UFW default policies
+  ufw:
+    direction: "{{ item.direction }}"
+    policy: "{{ item.policy }}"
+  loop:
+    - { direction: 'incoming', policy: 'deny' }
+    - { direction: 'outgoing', policy: 'allow' }
+  tags: [common, security]
+
+- name: Allow SSH through UFW
+  ufw:
+    rule: allow
+    port: "22"
+    proto: tcp
+  tags: [common, security]
+
+- name: Allow HTTP through UFW
+  ufw:
+    rule: allow
+    port: "80"
+    proto: tcp
+  tags: [common, security]
+
+- name: Allow HTTPS through UFW
+  ufw:
+    rule: allow
+    port: "443"
+    proto: tcp
+  tags: [common, security]
+
+- name: Enable UFW
+  ufw:
+    state: enabled
+  tags: [common, security]
+
+- name: Configure fail2ban
+  template:
+    src: jail.local.j2
+    dest: /etc/fail2ban/jail.local
+    mode: "0644"
+  notify: restart fail2ban
+  tags: [common, security]

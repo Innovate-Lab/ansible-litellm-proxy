@@ -1,0 +1,59 @@
+---
+# tasks file for ssl
+- name: Install Certbot and its Nginx plugin
+  apt:
+    name:
+      - certbot
+      - python3-certbot-nginx
+    state: present
+  tags: [ssl, certbot]
+
+- name: Check if certificate already exists
+  stat:
+    path: "/etc/letsencrypt/live/{{ domain_name }}/fullchain.pem"
+  register: cert_file
+  tags: [ssl, certbot]
+
+- name: Set up SSL email variable
+  set_fact:
+    ssl_email: "admin@{{ domain_name }}"
+  when: ssl_email is not defined
+  tags: [ssl, certbot]
+
+- name: Configure strong SSL parameters
+  template:
+    src: ssl-params.conf.j2
+    dest: /etc/nginx/snippets/ssl-params.conf
+    owner: root
+    group: root
+    mode: 0644
+  tags: [ssl, nginx]
+
+- name: Configure Diffie-Hellman parameters
+  command: openssl dhparam -out /etc/nginx/dhparam.pem 2048
+  args:
+    creates: /etc/nginx/dhparam.pem
+  tags: [ssl, nginx]
+
+- name: Obtain SSL certificate (if not exists)
+  command: >
+    certbot certonly --webroot 
+    -w /var/www/html 
+    -d {{ domain_name }} 
+    --non-interactive 
+    --agree-tos 
+    --email {{ ssl_email }}
+  args:
+    creates: "/etc/letsencrypt/live/{{ domain_name }}/fullchain.pem"
+  when: not cert_file.stat.exists
+  notify: reload nginx
+  tags: [ssl, certbot]
+
+- name: Set up automatic certificate renewal
+  cron:
+    name: "Certbot renewal"
+    job: "certbot renew --quiet --no-self-upgrade --post-hook 'systemctl reload nginx'"
+    hour: "2"
+    minute: "0"
+    weekday: "*"
+  tags: [ssl, certbot]

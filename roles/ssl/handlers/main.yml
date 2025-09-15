@@ -1,0 +1,6 @@
+---
+# handlers file for ssl
+- name: reload nginx
+  service:
+    name: nginx
+    state: reloaded

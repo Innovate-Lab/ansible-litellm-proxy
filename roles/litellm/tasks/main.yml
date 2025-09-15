@@ -1,0 +1,155 @@
+---
+# tasks file for litellm
+- name: Ensure application directory exists
+  file:
+    path: "{{ app_home }}"
+    state: directory
+    owner: "{{ app_user }}"
+    group: "{{ app_group }}"
+    mode: "0755"
+  tags: [litellm, setup]
+
+- name: Create cache directory
+  file:
+    path: "{{ app_home }}/.cache"
+    state: directory
+    owner: "{{ app_user }}"
+    group: "{{ app_group }}"
+    mode: "0755"
+  tags: [litellm, setup]
+
+- name: Copy configuration files
+  copy:
+    src: "/home/vbi/workspace/projects/deploy-litellm/{{ item.src }}"
+    dest: "{{ item.dest }}"
+    owner: "{{ app_user }}"
+    group: "{{ app_group }}"
+    mode: "{{ item.mode }}"
+    backup: yes
+  loop: "{{ config_files }}"
+  notify: restart litellm
+  tags: [litellm, config]
+
+- name: Get application user ID
+  command: "id -u {{ app_user }}"
+  register: app_user_uid
+  changed_when: false
+  tags: [litellm, docker]
+
+- name: Get application group ID
+  command: "id -g {{ app_group }}"
+  register: app_group_gid
+  changed_when: false
+  tags: [litellm, docker]
+
+- name: Generate docker-compose.yml from template
+  template:
+    src: docker-compose.yml.j2
+    dest: "{{ app_home }}/docker-compose.yml"
+    owner: "{{ app_user }}"
+    group: "{{ app_group }}"
+    mode: "0644"
+    backup: yes
+  notify: restart litellm
+  tags: [litellm, docker]
+
+- name: Create systemd service for LiteLLM
+  template:
+    src: litellm_service.j2
+    dest: "/etc/systemd/system/{{ app_name }}.service"
+    mode: "0644"
+  notify:
+    - reload systemd
+    - restart litellm
+  tags: [litellm, systemd]
+
+- name: Pull Docker images
+  docker_image:
+    name: "{{ docker_image }}"
+    source: pull
+    force_source: yes
+  tags: [litellm, docker]
+
+- name: Start and enable LiteLLM service
+  systemd:
+    name: "{{ app_name }}"
+    state: started
+    enabled: yes
+    daemon_reload: yes
+  tags: [litellm, service]
+
+# Force handlers to run before health check
+- name: Flush handlers to ensure restart completes
+  meta: flush_handlers
+  tags: [litellm, service]
+
+# Add a pause to ensure containers have time to fully start
+- name: Wait for containers to stabilize
+  pause:
+    seconds: 15
+  tags: [litellm, health]
+
+- name: Wait for LiteLLM to be ready
+  uri:
+    url: "http://localhost:{{ app_port }}/health/liveliness"
+    method: GET
+    status_code: 200
+  retries: 30
+  delay: 10
+  register: result
+  until: result.status == 200
+  tags: [litellm, health]
+
+- name: Create log rotation for LiteLLM
+  copy:
+    content: |
+      /var/log/{{ app_name }}/*.log {
+          daily
+          rotate 7
+          compress
+          delaycompress
+          missingok
+          notifempty
+          create 644 {{ app_user }} {{ app_group }}
+          postrotate
+              /usr/bin/docker exec $(docker ps -q -f name={{ app_name }}) kill -USR1 1 2>/dev/null || true
+          endscript
+      }
+    dest: "/etc/logrotate.d/{{ app_name }}"
+    mode: "0644"
+  tags: [litellm, logs]
+
+# Nginx Configuration for LiteLLM
+- name: Create Nginx log directory for domain
+  file:
+    path: "/var/log/nginx/{{ domain_name }}"
+    state: directory
+    owner: www-data
+    group: adm
+    mode: "0755"
+  tags: [litellm, nginx]
+
+- name: Deploy Nginx virtual host configuration
+  template:
+    src: nginx_vhost.conf.j2
+    dest: "/etc/nginx/sites-available/{{ domain_name }}.conf"
+    owner: root
+    group: root
+    mode: "0644"
+  notify: reload nginx
+  tags: [litellm, nginx]
+
+- name: Enable Nginx virtual host
+  file:
+    src: "/etc/nginx/sites-available/{{ domain_name }}.conf"
+    dest: "/etc/nginx/sites-enabled/{{ domain_name }}.conf"
+    state: link
+  notify: reload nginx
+  tags: [litellm, nginx]
+
+- name: Remove default Nginx site
+  file:
+    path: "/etc/nginx/sites-enabled/default"
+    state: absent
+  notify: reload nginx
+  tags: [litellm, nginx]

@@ -1,0 +1,32 @@
+---
+# Playbook to quickly update LiteLLM configuration
+- name: Update LiteLLM Config
+  hosts: litellm_servers
+  become: yes
+  gather_facts: no
+
+  roles:
+    - role: litellm
+      tags: [config]
+
+  post_tasks:
+    - name: Flush handlers to apply config changes
+      meta: flush_handlers
+      tags: [config]
+
+    - name: Wait for LiteLLM to be healthy after config update
+      uri:
+        url: "https://{{ domain_name }}/health"
+        method: GET
+        status_code: 200
+        validate_certs: yes
+      register: health_check
+      retries: 5
+      delay: 10
+      until: health_check.status == 200
+      tags: [config]
+
+    - name: Print update success message
+      debug:
+        msg: "LiteLLM configuration has been successfully updated."
+      tags: [litellm]

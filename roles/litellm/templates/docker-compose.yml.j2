@@ -1,0 +1,79 @@
+services:
+  {{ app_name }}:
+    image: {{ docker_image }}
+    container_name: {{ app_name }}_app
+    restart: unless-stopped
+    
+    # Service dependencies
+    depends_on:
+      - redis
+    
+    # Security options
+    security_opt:
+      - no-new-privileges:true
+    
+    volumes:
+      - ./config.yaml:/app/config.yaml:ro
+    
+    command:
+      - "--config=/app/config.yaml"
+    
+    ports:
+      - "127.0.0.1:{{ app_port }}:4000"
+    
+    environment:
+      - STORE_MODEL_IN_DB=True
+      - LITELLM_ENV=production
+    
+    env_file:
+      - .env
+    
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 4G
+        reservations:
+          cpus: '0.5'
+          memory: 1G
+    
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 http://localhost:4000/health/liveliness || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    
+    networks:
+      - {{ app_name }}_network
+
+  # Redis cache service
+  redis:
+    image: redis:alpine
+    container_name: {{ app_name }}_redis
+    restart: unless-stopped
+    command: redis-server --requirepass {{ redis_password | default('litellm_redis_password') }}
+    volumes:
+      - redis_data:/data
+    networks:
+      - {{ app_name }}_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+networks:
+  {{ app_name }}_network:
+    driver: bridge
+
+volumes:
+  redis_data:
+    name: {{ app_name }}_redis_data

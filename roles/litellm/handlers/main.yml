@@ -1,0 +1,15 @@
+---
+# handlers file for litellm
+- name: reload systemd
+  systemd:
+    daemon_reload: yes
+
+- name: restart litellm
+  command: "docker compose -f {{ app_home }}/docker-compose.yml up -d --force-recreate"
+  args:
+    chdir: "{{ app_home }}"
+
+- name: reload nginx
+  service:
+    name: nginx
+    state: reloaded

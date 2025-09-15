@@ -1,0 +1,23 @@
+[Unit]
+Description={{ app_name | title }} Docker Compose Application
+Requires=docker.service
+After=docker.service
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+User={{ app_user }}
+Group={{ app_group }}
+WorkingDirectory={{ app_home }}
+ExecStartPre=/usr/bin/docker compose -f {{ app_home }}/docker-compose.yml down
+ExecStart=/usr/bin/docker compose -f {{ app_home }}/docker-compose.yml up -d
+ExecStop=/usr/bin/docker compose -f {{ app_home }}/docker-compose.yml down
+ExecReload=/usr/bin/docker compose -f {{ app_home }}/docker-compose.yml restart
+TimeoutStartSec=300
+Restart=on-failure
+RestartSec=30
+
+[Install]
+WantedBy=multi-user.target
