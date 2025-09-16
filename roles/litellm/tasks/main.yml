@@ -18,15 +18,28 @@
     mode: "0755"
   tags: [litellm, setup]
 
-- name: Copy configuration files
+- name: Generate LiteLLM configuration from template
+  template:
+    src: litellm_config.j2
+    dest: "{{ app_home }}/config.yaml"
+    owner: "{{ app_user }}"
+    group: "{{ app_group }}"
+    mode: "0644"
+    backup: yes
+  notify: restart litellm
+  tags: [litellm, config]
+
+- name: Copy remaining configuration files
   copy:
-    src: "/home/vbi/workspace/projects/deploy-litellm/{{ item.src }}"
+    src: "{{ playbook_dir }}/../{{ item.src }}"
     dest: "{{ item.dest }}"
     owner: "{{ app_user }}"
     group: "{{ app_group }}"
     mode: "{{ item.mode }}"
     backup: yes
-  loop: "{{ config_files }}"
+  loop:
+    - { src: 'files/.env', dest: '{{ app_home }}/.env', mode: '0600' }
+    - { src: 'files/vertex_ai_credentials.json', dest: '{{ app_home }}/vertex_ai_credentials.json', mode: '0600' }
   notify: restart litellm
   tags: [litellm, config]
 

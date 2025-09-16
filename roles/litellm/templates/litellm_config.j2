@@ -1,0 +1,110 @@
+model_list:
+  - model_name: gemini-2.5-pro
+    litellm_params:
+      model: gemini/gemini-2.5-pro
+      # api_base: https://generativelanguage.googleapis.com/v1beta/openai/
+      api_key: os.environ/GEMINI_API_KEY
+  - model_name: gemini-2.5-flash-image
+    litellm_params:
+      model: gemini/gemini-2.5-flash-image-preview
+      api_key: os.environ/GEMINI_API_KEY
+
+  # - model_name: gemini-tts-pro
+  #   litellm_params:
+  #     model: gemini/gemini-2.5-pro-preview-tts
+  #     api_key: os.environ/GEMINI_API_KEY
+
+  # - model_name: claude-opus-4
+  #   litellm_params:
+  #     model: bedrock/us.anthropic.claude-opus-4-20250514-v1:0
+  #     thinking: {
+  #       "type": "enabled",
+  #       "budget_tokens": 1024
+  #     }
+  #     temperature: 1
+
+  # - model_name: claude-opus-4.1
+  #   litellm_params:
+  #     model: bedrock/invoke/us.anthropic.claude-opus-4-1-20250805-v1:0
+
+  # - model_name: claude-sonnet-4
+  #   litellm_params:
+  #     model: bedrock/invoke/us.anthropic.claude-sonnet-4-20250514-v1:0
+
+  # - model_name: claude-sonnet-4-1m
+  #   litellm_params:
+  #     model: bedrock/invoke/us.anthropic.claude-sonnet-4-20250514-v1:0
+  #     extra_headers:
+  #       anthropic-beta: "context-1m-2025-08-07" # 👈 Enable 1M context
+
+  # - model_name: claude-3.7-sonnet
+  #   litellm_params:
+  #     model: bedrock/us.anthropic.claude-3-7-sonnet-20250219-v1:0
+  #     performanceConfig: {"latency": "optimized"} # 👈 EITHER HERE OR ON REQUEST
+
+  # - model_name: claude-computer-use
+  #   litellm_params:
+  #     model: bedrock/converse/us.anthropic.claude-3-7-sonnet-20250219-v1:0
+  #     extra_headers:
+  #       anthropic-beta: "computer-use-2024-10-22,context-1m-2025-08-07"
+
+  # Azure OpenAI GPT-4o
+  - model_name: gpt-4.1
+    litellm_params:
+      model: azure/gpt-4.1
+      api_base: os.environ/AZURE_OPENAI_API_BASE
+      api_key: os.environ/AZURE_OPENAI_API_KEY
+      api_version: "2025-01-01-preview"
+
+  - model_name: o3-mini
+    litellm_params:
+      model: azure/o3-mini
+      api_base: os.environ/AZURE_OPENAI_ENDPOINT_O3_MINI
+      api_key: os.environ/AZURE_OPENAI_KEY_O3_MINI
+      api_version: "2024-12-01-preview"
+      
+  # - model_name: azure-gpt-4o
+  #   litellm_params:
+  #     model: azure/gpt-4o
+  #     api_base: os.environ/AZURE_OPENAI_ENDPOINT_GPT_4O
+  #     api_key: os.environ/AZURE_OPENAI_KEY_GPT_4O
+  #     api_version: "2024-08-01-preview"
+
+  - model_name: gpt-5-mini
+    litellm_params:
+      model: azure/gpt-5-mini
+      api_base: os.environ/AZURE_OPENAI_ENDPOINT_GPT_5_MINI
+      api_key: os.environ/AZURE_OPENAI_KEY_GPT_5_MINI
+      api_version: "2024-12-01-preview"
+
+  - model_name: vertex-imagen-4
+    litellm_params:
+      model: vertex_ai/imagen-4.0-generate-001
+      vertex_ai_project: "{{ litellm_vertex_project }}"
+      vertex_ai_location: "{{ litellm_vertex_location }}"
+      vertex_ai_credentials: "{{ app_home }}/vertex_ai_credentials.json"
+
+# LiteLLM Settings
+litellm_settings:
+  modify_params: true
+  drop_params: true
+  cache: true
+  num_retries: 3
+  cache_params:
+    type: redis
+    host: litellm-proxy_redis  # Docker container name
+    port: 6379
+    password: "{{ redis_password }}"
+    namespace: "litellm.caching"
+
+router_settings:
+  # fallbacks: [{"gpt-5-mini": ["gpt-4.1", "gemini-2.5-pro"]}, {"claude-opus-4": ["claude-opus-4.1", "claude-sonnet-4"]}]
+  fallbacks: [{"gpt-5-mini": ["gpt-4.1", "gemini-2.5-pro"]}]
+  default_model: gpt-5-mini
+general_settings:
+  forward_client_headers_to_llm_api: true  # 👈 Required for client-side header forwarding
+  master_key: os.environ/LITELLM_MASTER_KEY
+  ui_access_mode: admin_only
+
+# environment_variables:
+#  GOOGLE_APPLICATION_CREDENTIALS: "{{ app_home }}/vertex_ai_credentials.json"
