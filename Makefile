@@ -23,7 +23,7 @@ install: ## Install Ansible collections from requirements.yml
 .PHONY: deploy
 deploy: ## Run the full deployment playbook (site.yml)
 	@echo "Running full deployment..."
-	ansible-playbook -i $(HOSTS_FILE) $(SITE_PLAYBOOK) --ask-vault-pass
+	ansible-playbook -i $(HOSTS_FILE) $(SITE_PLAYBOOK) --vault-password-file .vault_pass
 
 .PHONY: update
 update: ## Apply configuration updates (update_config.yml)
@@ -71,17 +71,17 @@ encrypt: ## Encrypt a file. Usage: make encrypt FILE=path/to/file.yml
 .PHONY: decrypt
 decrypt: ## Decrypt a file. Usage: make decrypt FILE=path/to/file.yml
 	@echo "Decrypting file: $(FILE)"
-	ansible-vault decrypt $(FILE)
+	ansible-vault decrypt $(FILE) --vault-password-file .vault_pass
 
 .PHONY: edit-vault
 edit-vault: ## Edit an encrypted file. Usage: make edit-vault FILE=path/to/file.yml
 	@echo "Editing vault file: $(FILE)"
-	ansible-vault edit $(FILE)
+	ansible-vault edit $(FILE) --vault-password-file .vault_pass
 
 .PHONY: rekey-vault
 rekey-vault: ## Change the password for an encrypted file. Usage: make rekey-vault FILE=path/to/file.yml
 	@echo "Rekeying vault file: $(FILE)"
-	ansible-vault rekey $(FILE)
+	ansible-vault rekey $(FILE) --vault-password-file .vault_pass
 
 # ==============================================================================
 # Help
