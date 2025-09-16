@@ -13,8 +13,8 @@ services:
       - no-new-privileges:true
     
     volumes:
-      - ./config.yaml:/app/config.yaml:ro
-      - ./vertex_ai_credentials.json:/app/vertex_ai_credentials.json:ro
+      - "{{ app_home }}/config.yaml:/app/config.yaml:ro"
+      - "{{ app_home }}/vertex_ai_credentials.json:/app/vertex_ai_credentials.json:ro"
     
     command:
       - "--config=/app/config.yaml"

@@ -82,7 +82,7 @@ model_list:
       model: vertex_ai/imagen-4.0-generate-001
       vertex_ai_project: "{{ litellm_vertex_project }}"
       vertex_ai_location: "{{ litellm_vertex_location }}"
-      vertex_ai_credentials: "{{ app_home }}/vertex_ai_credentials.json"
+      vertex_ai_credentials: "/app/vertex_ai_credentials.json"
 
 # LiteLLM Settings
 litellm_settings:
