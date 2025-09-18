@@ -38,8 +38,8 @@
     mode: "{{ item.mode }}"
     backup: yes
   loop:
-    - { src: 'files/.env', dest: '{{ app_home }}/.env', mode: '0600' }
-    - { src: 'files/vertex_ai_credentials.json', dest: '{{ app_home }}/vertex_ai_credentials.json', mode: '0600' }
+    - { src: 'files/.env.vault', dest: '{{ app_home }}/.env', mode: '0600' }
+    - { src: 'files/vertex_ai_credentials.json.vault', dest: '{{ app_home }}/vertex_ai_credentials.json', mode: '0600' }
   notify: restart litellm
   tags: [litellm, config]
 
