@@ -4,3 +4,5 @@
 __pycache__/
 *.pyc
 .venv
+files/.env
+files/vertex_ai_credentials.json
